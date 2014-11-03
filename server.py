@@ -7,9 +7,9 @@ target_port = 6659
 target = 'irc://chat.freenode.net/#test'
 
 def build_message(r):
-  i = [x for x in r['commits'] if x['id'] == r['after']]
+  commit = [x for x in r['commits'] if x['id'] == r['after']][0]
   branch = r['ref'][r['ref'].rfind('/')+1:]
-  return '\x02' + r['repository']['name'] + '\x02: ' + r['commits'][i]['author']['name'] + ' ' + branch + ' * r\x02' + r['after'] + '\x02: ' + r['commits'][i]['message'] + ' - ' + r['commits'][i]['url']
+  return '\x02' + r['repository']['name'] + '\x02: ' + commit['author']['name'] + ' ' + branch + ' * r\x02' + r['after'] + '\x02: ' + commit['message'] + ' - ' + commit['url']
 
 def handle_request(request):
   msg = json.dumps({'to': target, 'privmsg': build_message(request)})

@@ -1,17 +1,25 @@
 #!/usr/bin/python
 
-import BaseHTTPServer, ssl, argparse, json, datetime
+import BaseHTTPServer, ssl, argparse, json, socket
+
+target_server = "localhost"
+target_port = 6659
+target = 'irc://chat.freenode.net/#test'
+
+def build_message(r):
+  i = len(r['commits'])-1
+  branch = r['ref'][r['ref'].rfind('/')+1:]
+  return r['repository']['name'] + ': ' + r['commits'][i]['author']['name'] + ' ' + branch + ' * ' + r['after'] + ': ' + r['commits'][i]['message'] + ' - ' + r['commits'][i]['url']
 
 def handle_request(request):
-  print request
+  msg = json.dumps({'to': target, 'privmsg': build_message(request)})
+  try:
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.sendto(msg + "\n", (target_server, target_port))
+  finally:
+    sock.close()
 
-def json_handler(obj):
-  if hasattr(obj, 'isoformat'):
-    return obj.isoformat()
-  else:
-    raise TypeError, 'Object of type %s with value of %s is not JSON serializable' % (type(obj), repr(obj))
-
-class JSONRPCServer(BaseHTTPServer.BaseHTTPRequestHandler):
+class JSONServer(BaseHTTPServer.BaseHTTPRequestHandler):
 
   def __init__(self, request, client_address, server):
     BaseHTTPServer.BaseHTTPRequestHandler.__init__(self, request, client_address, server)
@@ -51,7 +59,7 @@ if __name__ == '__main__':
 
   args = parser.parse_args()
 
-  httpd = BaseHTTPServer.HTTPServer(('0.0.0.0', args.port), JSONRPCServer)
+  httpd = BaseHTTPServer.HTTPServer(('0.0.0.0', args.port), JSONServer)
   if(args.ssl):
     httpd.socket = ssl.wrap_socket(httpd.socket, keyfile='server.key', certfile='server.crt', server_side=True)
   httpd.serve_forever()
